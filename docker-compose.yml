@@ -1,0 +1,152 @@
+version: '3.8'
+
+networks:
+  app-network:
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:13
+    env_file: ./.env
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  minio:
+    image: minio/minio:latest
+    # Démarrer le serveur MinIO avec console sur 9001
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    ports:
+      - "9000:9000"  # API MinIO
+      - "9001:9001"  # Console MinIO UI
+    volumes:
+      - ./data/minio:/data
+    networks:
+      - app-network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - app-network
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_HOST://kafka:29092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_HOST
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - app-network
+
+ 
+
+  kong_main_db_instance:
+    image: postgres:13
+    container_name: kong_main_db_instance
+    environment:
+      POSTGRES_USER: kong
+      POSTGRES_DB: kong
+      POSTGRES_PASSWORD: kong
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./data/kong:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  kong-migrations-job:
+    image: kong:3.6
+    container_name: kong-migrations-job
+    command: kong migrations bootstrap
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong_main_db_instance
+      KONG_PG_PASSWORD: kong
+      KONG_PASSWORD: kong
+    depends_on:
+      - kong_main_db_instance
+    networks:
+      - app-network
+
+  kong-gateway-instance:
+    image: kong:3.6
+    container_name: kong-gateway-instance
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong_main_db_instance
+      KONG_PG_PASSWORD: kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001,0.0.0.0:8444 ssl
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+      - "8001:8001"
+      - "8444:8444"
+    depends_on:
+      - kong-migrations-job
+    networks:
+      - app-network
+
+  konga_main_db_instance:
+    image: postgres:11
+    container_name: konga_main_db_instance
+    environment:
+      POSTGRES_USER: konga
+      POSTGRES_DB: konga_db
+      POSTGRES_PASSWORD: konga
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./data/konga:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U konga"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  konga-ui-instance:
+    image: pantsel/konga:latest
+    container_name: konga-ui-instance
+    environment:
+      DB_ADAPTER: postgres
+      DB_HOST: konga_main_db_instance
+      DB_PORT: 5432
+      DB_USER: konga
+      DB_PASSWORD: konga
+      DB_DATABASE: konga_db
+      NODE_ENV: development
+      TOKEN_SECRET: UnSecretFortEtUniquePourKonga
+    ports:
+      - "1337:1337"
+    depends_on:
+      - kong-gateway-instance
+      - konga_main_db_instance
+    restart: always
+    networks:
+      - app-network
+
+

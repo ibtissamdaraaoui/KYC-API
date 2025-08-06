@@ -1,0 +1,25 @@
+# Framework et BDD
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+
+# Kafka
+kafka-python
+
+# Stockage et secrets
+boto3
+hvac
+
+# Traitement d'image et IA
+opencv-python
+numpy
+tensorflow
+tf-keras
+mtcnn
+deepface
+
+# Utilitaires
+python-dotenv
+
+cryptography==42.0.5

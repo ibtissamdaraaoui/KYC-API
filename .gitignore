@@ -1,8 +1,51 @@
-echo "data/" >> .gitignore
-echo "*.log" >> .gitignore
-echo "*.pid" >> .gitignore
-echo "*.db" >> .gitignore
-echo "*.conf" >> .gitignore
-echo "*.auto.conf" >> .gitignore
-echo "*.opts" >> .gitignore
-echo "__pycache__/" >> .gitignore
+# ---- Environnements virtuels Python ----
+venv/
+**/venv/
+venv2/
+**/venv2/
+
+# ---- Cache Python et fichiers compilés ----
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+
+# ---- Fichiers temporaires et logs ----
+*.log
+*.pid
+*.db
+*.sqlite3
+
+# ---- Configurations et fichiers auto générés ----
+*.conf
+*.auto.conf
+*.opts
+
+# ---- Docker ----
+data/
+*.env
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# ---- IDEs et éditeurs ----
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ---- Build et distribution ----
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# ---- Système ----
+.DS_Store
+Thumbs.db
+
+# ---- Autres ----
+*.bak
+*.tmp
+*.temp

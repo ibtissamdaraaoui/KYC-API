@@ -1,0 +1,25 @@
+# Framework principal
+fastapi==0.110.0
+uvicorn==0.29.0
+
+# ORM pour PostgreSQL
+SQLAlchemy==2.0.29
+psycopg2-binary==2.9.9
+
+# Client MinIO
+minio==7.2.5
+
+# Client HashiCorp Vault
+hvac==2.1.0
+
+# Chiffrement AES-256
+cryptography==42.0.5
+
+# Kafka Producer
+kafka-python==2.0.2
+
+# Pydantic pour schémas de réponse
+pydantic==2.7.1
+
+# Dotenv pour config éventuelle
+python-dotenv==1.0.1

@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+kafka-python
+boto3
+botocore
+sqlalchemy
+psycopg2
+pdf2image
+Pillow
+python-dotenv
+cryptography
+easyocr
+opencv-python-headless==4.9.0.80
+requests
+pytz
