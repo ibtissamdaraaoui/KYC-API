@@ -112,22 +112,25 @@ async def upload_cin_images(
 
     # 5-4. Sauvegarde de la ligne dans PostgreSQL
     db: Session = SessionLocal()
+    # --- MODIFIÉ ---
     doc = Document(
-        kyc_case_id   = kyc_case_id,
-        filename      = f"{recto.filename} + {verso.filename}",
-        file_path     = "|".join(file_keys),            # recto|verso
-        upload_time   = datetime.utcnow(),
-        vault_key_path  = vault_key_path
+        kyc_case_id=kyc_case_id,
+        recto_path=file_keys[0], # Plus clair
+        verso_path=file_keys[1],
+        vault_key_path=vault_key_path
     )
-    db.add(doc); db.commit(); db.refresh(doc); db.close()
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+    db.close()
 
     # 5-5. Construction & envoi du message Kafka
+    # --- MODIFIÉ ---
     payload = {
-        "id"        : doc.id,
+        "id": doc.id,
         "kyc_case_id": kyc_case_id,
-        "filename"  : doc.filename,
-        "file_path" : doc.file_path,
-        "upload_time": doc.upload_time.isoformat()
+        "file_path": f"{doc.recto_path}|{doc.verso_path}",
+        "upload_time": doc.created_at.isoformat()
     }
     try:
         producer.send(KAFKA_TOPIC, payload)
@@ -135,5 +138,4 @@ async def upload_cin_images(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur Kafka : {e}")
 
-    # 5-6. Retourne la représentation du document enregistré
     return doc

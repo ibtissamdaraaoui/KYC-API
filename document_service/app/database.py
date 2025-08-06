@@ -14,5 +14,6 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 def init_db():
-    from app import models  # <== Import local ici pour éviter l'importation circulaire
-    Base.metadata.create_all(bind=engine)
+    from app.models import Document
+    Base.metadata.create_all(bind=engine, tables=[Document.__table__])
+    print("Table 'documents' initialisée par le document_service.")

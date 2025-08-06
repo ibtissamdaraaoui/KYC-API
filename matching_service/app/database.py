@@ -26,10 +26,8 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 def init_db():
-    """
-    Crée toutes les tables dans la base de données qui héritent de Base.
-    À appeler au démarrage de l'application.
-    """
-    print("Initialisation de la base de données...")
-    Base.metadata.create_all(bind=engine)
-    print("Tables créées (si elles n'existaient pas).")
+    from app.models import MatchingTask, MatchingResult
+    # On passe une liste des tables que ce service a le droit de créer
+    tables_to_create = [MatchingTask.__table__, MatchingResult.__table__]
+    Base.metadata.create_all(bind=engine, tables=tables_to_create)
+    print("Tables 'matching_tasks' et 'matching_results' initialisées par le matching_service.")

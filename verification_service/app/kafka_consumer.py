@@ -73,14 +73,17 @@ for message in consumer:
 
         # ────────── 4. Enregistrement base de données ──────────
         db = SessionLocal()
+
         verification_data = VerificationResultCreate(
-            kyc_case_id=kyc_case_id,
-            document_id=doc_id,
+            document_id=doc_id, # C'est maintenant le champ principal
             raw_text=recto_text_str + "\n" + verso_text_str,
-            structured_data=json.dumps(rapport_validation),
+            structured_data=rapport_validation, # Passer le dictionnaire directement
             status=rapport_validation.get("status_validation", "NON_VALIDÉ")
         )
+        
+        # Appeler la fonction CRUD
         create_verification_result(db, verification_data)
+        
         db.close()
 
         print("Résultat structuré stocké avec succès.\n")

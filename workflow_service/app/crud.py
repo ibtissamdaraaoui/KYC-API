@@ -1,27 +1,27 @@
-from sqlalchemy.orm import Session
-from app.models import KycCase, KycCaseStatus
-from fastapi import HTTPException
+# Fichier: workflow_service/app/crud.py
 
-# --- DÉBUT DU NOUVEAU CODE ---
+from sqlalchemy.orm import Session
+from fastapi import HTTPException
+from app.models import KycCase, KycCaseStatus  # <-- L'IMPORT FONCTIONNE MAINTENANT ICI
+
 def get_and_validate_case_for_upload(db: Session, kyc_case_id: str) -> KycCase:
     """
     Récupère un cas KYC et valide s'il est apte à recevoir un upload.
     Lève une HTTPException en cas de problème.
     """
-    # 1. Vérifier si le cas existe
     case = db.query(KycCase).filter(KycCase.kyc_case_id == kyc_case_id).first()
     if not case:
         raise HTTPException(status_code=404, detail=f"KYC Case '{kyc_case_id}' not found.")
         
-    # 2. Vérifier si le statut permet l'upload
+    # On compare directement le membre de l'Enum
     if case.status != KycCaseStatus.IN_PROGRESS:
         raise HTTPException(
             status_code=400, 
+            # .value donne la chaîne de caractères (ex: "IN_PROGRESS") pour l'afficher
             detail=f"Cannot upload files for this case. Its current status is '{case.status.value}'."
         )
         
     return case
-# --- FIN DU NOUVEAU CODE ---
 
 def update_kyc_case_status(db: Session, kyc_case_id: str, status: KycCaseStatus, reason: str = None):
     """
@@ -30,6 +30,7 @@ def update_kyc_case_status(db: Session, kyc_case_id: str, status: KycCaseStatus,
     db_case = db.query(KycCase).filter(KycCase.kyc_case_id == kyc_case_id).first()
     
     if db_case:
+        # On assigne directement l'objet Enum, SQLAlchemy sait comment le gérer
         db_case.status = status
         if reason:
             db_case.failure_reason = reason

@@ -1,8 +1,13 @@
-import enum
-from sqlalchemy import Column, Integer, String, DateTime, Enum as SQLAlchemyEnum
-from sqlalchemy.sql import func
-from app.database import Base 
+# Fichier: workflow_service/app/models.py
 
+import enum
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum as SQLAlchemyEnum
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from app.database import Base
+
+
+# --- L'ENUM EST DÉFINI ICI ---
 class KycCaseStatus(enum.Enum):
     IN_PROGRESS = "IN_PROGRESS"
     VERIFIED = "VERIFIED"
@@ -12,15 +17,28 @@ class KycCaseStatus(enum.Enum):
 
 class KycCase(Base):
     __tablename__ = "kyc_cases"
-
     id = Column(Integer, primary_key=True, index=True)
-    
-    # L'ID de corrélation que vous utilisez partout
     kyc_case_id = Column(String, unique=True, index=True, nullable=False)
-
-    # MODIFICATION: Ajout du statut et de la raison de l'échec
-    status = Column(SQLAlchemyEnum(KycCaseStatus), nullable=False, default=KycCaseStatus.IN_PROGRESS)
-    failure_reason = Column(String, nullable=True) # Pour stocker "DISCORDANCE_RECTO_MRZ", etc.
     
+    # La colonne utilise l'Enum défini juste au-dessus
+    status = Column(SQLAlchemyEnum(KycCaseStatus), nullable=False, default=KycCaseStatus.IN_PROGRESS)
+    
+    failure_reason = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    documents = relationship("Document")
+    selfies = relationship("Selfie")
+
+# Modèles miroirs (inchangés)
+class Document(Base):
+    __tablename__ = "documents"
+    __table_args__ = {'extend_existing': True}
+    id = Column(Integer, primary_key=True)
+    kyc_case_id = Column(String, ForeignKey("kyc_cases.kyc_case_id"))
+
+class Selfie(Base):
+    __tablename__ = "selfies"
+    __table_args__ = {'extend_existing': True}
+    id = Column(Integer, primary_key=True)
+    kyc_case_id = Column(String, ForeignKey("kyc_cases.kyc_case_id"))

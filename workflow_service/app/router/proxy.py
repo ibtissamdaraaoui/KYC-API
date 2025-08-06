@@ -1,11 +1,11 @@
 # Fichier: app/router/proxy.py
 
-from fastapi import APIRouter, UploadFile, File, Form, Depends # <-- AJOUT DE Depends
-from sqlalchemy.orm import Session # <-- NOUVEL IMPORT
+from fastapi import APIRouter, UploadFile, File, Form, Depends 
+from sqlalchemy.orm import Session 
 import requests
 
-from app.router.case import get_db # <-- NOUVEL IMPORT
-from app.crud import get_and_validate_case_for_upload # <-- NOUVEL IMPORT
+from app.router.case import get_db 
+from app.crud import get_and_validate_case_for_upload
 
 router = APIRouter()
 

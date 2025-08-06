@@ -1,7 +1,12 @@
+# Fichier: workflow_service/app/schemas.py
+
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional # MODIFICATION: Importer Optional
-from .models import KycCaseStatus # MODIFICATION: Importer l'Enum depuis models
+from typing import Optional
+
+# --- CORRECTION ---
+# On importe l'Enum depuis son emplacement réel : le fichier models.py
+from .models import KycCaseStatus
 
 class KycCaseCreate(BaseModel):
     kyc_case_id: str
@@ -12,7 +17,11 @@ class KycCaseCreate(BaseModel):
 
 class KycCaseStatusResponse(BaseModel):
     kyc_case_id: str
-    status: KycCaseStatus # Utilise votre Enum
+    
+    # --- CORRECTION ---
+    # Le type du statut est maintenant l'Enum 'KycCaseStatus' pour correspondre au modèle.
+    status: KycCaseStatus 
+    
     failure_reason: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None

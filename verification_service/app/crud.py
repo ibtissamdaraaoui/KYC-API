@@ -1,19 +1,26 @@
-from sqlalchemy.orm import Session
-from app.models import VerificationResult
-from app.schemas import VerificationResultCreate
+# Fichier: verification_service/app/crud.py
 
-def create_verification_result(db: Session, result: VerificationResultCreate):
+from sqlalchemy.orm import Session
+from . import models, schemas # Importer les modèles et schémas locaux
+
+def create_verification_result(db: Session, result: schemas.VerificationResultCreate) -> models.VerificationResult:
     """
-    Insère un résultat OCR structuré dans la base de données.
+    Insère un nouveau résultat de vérification dans la base de données.
+    
+    Args:
+        db: La session SQLAlchemy.
+        result: Un objet Pydantic VerificationResultCreate contenant les données à insérer.
+
+    Returns:
+        L'objet SQLAlchemy VerificationResult qui vient d'être créé.
     """
-    db_result = VerificationResult(
-        kyc_case_id=result.kyc_case_id,
-        document_id=result.document_id,
-        raw_text=result.raw_text,
-        structured_data=result.structured_data,
-        status=result.status
-    )
+    # Créer une instance du modèle SQLAlchemy en utilisant les données du schéma Pydantic
+    # .model_dump() convertit le schéma Pydantic en un dictionnaire compatible
+    db_result = models.VerificationResult(**result.model_dump())
+    
+    # Ajouter, commiter et rafraîchir pour obtenir l'ID généré par la BDD
     db.add(db_result)
     db.commit()
     db.refresh(db_result)
+    
     return db_result

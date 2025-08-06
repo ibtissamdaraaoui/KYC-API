@@ -10,4 +10,5 @@ Base = declarative_base()
 
 def init_db():
     from app.models import Selfie
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=engine, tables=[Selfie.__table__])
+    print("Table 'selfies' initialisée par le selfie_service.")

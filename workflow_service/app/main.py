@@ -4,9 +4,9 @@ from app import models
 from app.database import engine
 from app.router import case, proxy
 from app.kafka_consumer import consume_failure_messages # MODIFICATION
-
-# Création des tables au démarrage
-models.Base.metadata.create_all(bind=engine)
+from app.database import init_db
+# --- CORRECTION : Appeler la fonction d'initialisation contrôlée ---
+init_db()
 
 app = FastAPI(title="workflow_service")
 
