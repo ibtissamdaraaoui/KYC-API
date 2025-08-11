@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from app import models
 from app.database import engine
 from app.router import case, proxy
-from app.kafka_consumer import consume_failure_messages # MODIFICATION
+from app.kafka_consumer import consume_workflow_events# MODIFICATION
 from app.database import init_db
 # --- CORRECTION : Appeler la fonction d'initialisation contrôlée ---
 init_db()
@@ -15,7 +15,7 @@ def on_startup():
     """Lance le consommateur Kafka dans un thread d'arrière-plan."""
     print("API starting up... Launching Kafka consumer thread.")
     consumer_thread = threading.Thread(
-        target=consume_failure_messages,
+        target=consume_workflow_events,
         daemon=True  # Permet à l'application de quitter même si le thread tourne
     )
     consumer_thread.start()

@@ -13,16 +13,16 @@ def get_or_create_task(db: Session, kyc_case_id: str) -> models.MatchingTask:
 
 def update_task_with_document(db: Session, task: models.MatchingTask, doc_id: int):
     task.document_id = doc_id
-    db.commit()
+    
     print(f"[{task.kyc_case_id}] Tâche de matching mise à jour avec document ID: {doc_id}")
 
 def update_task_with_selfie(db: Session, task: models.MatchingTask, selfie_id: int):
     task.selfie_id = selfie_id
-    db.commit()
+    
     print(f"[{task.kyc_case_id}] Tâche de matching mise à jour avec selfie ID: {selfie_id}")
 
 def create_matching_result(db: Session, result_data: dict):
     new_result = models.MatchingResult(**result_data)
     db.add(new_result)
-    db.commit()
+    
     return new_result

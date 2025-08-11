@@ -14,7 +14,7 @@ from app.structuration_processor import process_structuration
 # ─────────────── Paramètres Kafka ───────────────
 KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "document_uploaded")
 KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
-KAFKA_GROUP_ID = os.getenv("KAFKA_GROUP_ID", "verification_group")
+KAFKA_GROUP_ID = os.getenv("KAFKA_GROUP_ID", "verification_group_v2")
 
 # -------MODIFICATION: Ajout du topic pour le producteur --
 KAFKA_SUCCESS_TOPIC = os.getenv("KAFKA_VERIFIED_TOPIC", "document_verified")
@@ -27,7 +27,9 @@ consumer = KafkaConsumer(
     group_id=KAFKA_GROUP_ID,
     value_deserializer=lambda m: json.loads(m.decode("utf-8")),
     auto_offset_reset="latest",
-    enable_auto_commit=True
+    enable_auto_commit=False,
+    session_timeout_ms=60000,  # 2. Augmente le timeout de session à 60 secondes.
+    max_poll_interval_ms=600000
 )
 
 # MODIFICATION: Initialisation du producteur
@@ -131,6 +133,13 @@ for message in consumer:
 
         producer.flush() # Forcer l'envoi
         print("-" * 50)
+         # ==========================================================
+        # AJOUT CRUCIAL : On commit l'offset manuellement ICI
+        # Cela dit à Kafka : "Le traitement de ce message est terminé avec succès.
+        # Ne me le renvoyez plus."
+        # ==========================================================
+        consumer.commit()
+        print("Offset commité avec succès. En attente du prochain message.")
 
     except Exception as e:
         # Gérer les erreurs techniques (ex: MinIO inaccessible) en publiant aussi un échec

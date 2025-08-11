@@ -23,3 +23,19 @@ deepface
 python-dotenv
 
 cryptography==42.0.5
+
+
+# 1. Librairie principale pour l'orchestration
+deepface
+
+# 2. Librairie pour le traitement d'image (lecture, redimensionnement, etc.)
+opencv-python-headless
+
+# 3. Le framework de Deep Learning (le "moteur")
+#    Nous installons la version CPU. Si vous aviez un GPU NVIDIA avec CUDA,
+#    il faudrait installer tensorflow-gpu.
+tensorflow
+
+# 4. Le modèle MTCNN pour la détection de visage
+#    DeepFace peut l'utiliser, mais il est parfois plus stable de l'installer soi-même.
+mtcnn
