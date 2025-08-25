@@ -1,4 +1,12 @@
 # Fichier: matching_service/app/kafka_clients.py
+# ------------------ BLOC DE CONFIGURATION CENTRALE ------------------
+import sys
+from pathlib import Path
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))
+from config import settings
+# --------------------------------------------------------------------
+
 import os
 import json
 import time
@@ -16,17 +24,27 @@ from app.processor.face_matcher import extract_face_from_image, verify_faces
 
 # Initialisation BDD
 init_db()
-
-# --- CONFIGURATION KAFKA ---
+# --- CONFIGURATION KAFKA (VERSION FINALE CORRIGÉE ET ROBUSTE) ---
 KAFKA_BROKER = os.getenv("KAFKA_BROKER")
-# Topics lus par le consommateur
 TOPIC_DOC_VERIFIED = os.getenv("KAFKA_DOCUMENT_VERIFIED_TOPIC")
 TOPIC_SELFIE_UPLOADED = os.getenv("KAFKA_SELFIE_UPLOADED_TOPIC")
-KAFKA_GROUP_ID = os.getenv("KAFKA_GROUP_ID_MATCHING", "matching_group")
+KAFKA_GROUP_ID = os.getenv("KAFKA_MATCHING_GROUP_ID")  # On utilise un nom spécifique
+KAFKA_MATCHING_SUCCESS_TOPIC = os.getenv("KAFKA_MATCHING_SUCCESS_TOPIC")
+KAFKA_FAILURE_TOPIC = os.getenv("KAFKA_FAILURE_TOPIC")
 
-# Topics écrits par le producteur
-KAFKA_MATCHING_SUCCESS_TOPIC = os.getenv("KAFKA_MATCHING_SUCCESS_TOPIC", "matching_completed")
-KAFKA_FAILURE_TOPIC = os.getenv("KAFKA_FAILURE_TOPIC", "kyc_case_failed")
+# Vérification "Fail-Fast" pour s'assurer que TOUT est configuré
+required_vars = {
+    "KAFKA_BROKER": KAFKA_BROKER,
+    "KAFKA_DOCUMENT_VERIFIED_TOPIC": TOPIC_DOC_VERIFIED,
+    "KAFKA_SELFIE_UPLOADED_TOPIC": TOPIC_SELFIE_UPLOADED,
+    "KAFKA_MATCHING_GROUP_ID": KAFKA_GROUP_ID,
+    "KAFKA_MATCHING_SUCCESS_TOPIC": KAFKA_MATCHING_SUCCESS_TOPIC,
+    "KAFKA_FAILURE_TOPIC": KAFKA_FAILURE_TOPIC
+}
+missing_vars = [key for key, value in required_vars.items() if not value]
+if missing_vars:
+    raise ValueError(f"ERREUR: Variables d'environnement Kafka manquantes pour le matching_service : {', '.join(missing_vars)}")
+
 
 # --- INITIALISATION DU PRODUCTEUR KAFKA ---
 # On le crée une seule fois pour être réutilisé
@@ -216,6 +234,5 @@ def consume_events():
             db.close()
 
 if __name__ == "__main__":
-    from dotenv import load_dotenv
-    load_dotenv()
+    
     consume_events()

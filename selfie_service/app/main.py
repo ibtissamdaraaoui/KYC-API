@@ -1,3 +1,11 @@
+# ------------------ BLOC DE CONFIGURATION CENTRALE ------------------
+import sys
+from pathlib import Path
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))
+from config import settings
+# --------------------------------------------------------------------
+
 # ───────────────────────────────────────────────
 # Imports standard & dépendances
 # ───────────────────────────────────────────────
@@ -33,26 +41,26 @@ from cryptography.hazmat.backends import default_backend
 # ───────────────────────────────────────────────
 init_db()  # Crée la table 'selfies' si elle n'existe pas
 
+# ───────────────────────────────────────────────
+# 2) Configuration Kafka (CORRIGÉE)
+#    • Les valeurs proviennent maintenant du .env central
+# ───────────────────────────────────────────────
+KAFKA_TOPIC = os.getenv("KAFKA_SELFIE_UPLOADED_TOPIC")
+KAFKA_BROKER = os.getenv("KAFKA_BROKER")
 
-# ───────────────────────────────────────────────
-# 2) Configuration Kafka
-#    • Topic           : selfie_uploaded
-#    • Broker par défaut: localhost:9092
-# ───────────────────────────────────────────────
-KAFKA_TOPIC  = "selfie_uploaded"
-KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
+# Vérification pour la robustesse (fail-fast)
+if not KAFKA_TOPIC or not KAFKA_BROKER:
+    raise ValueError("Les variables d'environnement KAFKA_SELFIE_UPLOADED_TOPIC ou KAFKA_BROKER sont manquantes.")
 
 producer = KafkaProducer(
     bootstrap_servers=KAFKA_BROKER.split(","),
     value_serializer=lambda v: json.dumps(v).encode("utf-8")
 )
 
-
 # ───────────────────────────────────────────────
 # 3) Initialisation FastAPI
 # ───────────────────────────────────────────────
 app = FastAPI(title="Selfie Service - KYC", version="1.0")
-
 
 # ───────────────────────────────────────────────
 # 4) Fonction utilitaire : chiffrement AES-256 en mémoire

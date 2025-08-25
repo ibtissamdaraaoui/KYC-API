@@ -5,11 +5,8 @@ import base64
 import requests
 from datetime import datetime
 
-from dotenv import load_dotenv
-load_dotenv()
-
-VAULT_ADDR = os.getenv("VAULT_ADDR", "http://127.0.0.1:8200")
-VAULT_TOKEN = os.getenv("VAULT_TOKEN", "s.root123...")  # à sécuriser plus tard !
+VAULT_ADDR = os.getenv("VAULT_ADDR")
+VAULT_TOKEN = os.getenv("VAULT_TOKEN")
 
 def store_key_in_vault(aes_key: bytes, kyc_case_id: str) -> str:
     """

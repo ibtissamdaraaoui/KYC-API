@@ -4,11 +4,13 @@ import os
 # ────────────────────────────────────────────────────────────────
 # 1) Paramètres MinIO (récupérés depuis les variables d’environnement)
 # ────────────────────────────────────────────────────────────────
-MINIO_ENDPOINT     = os.getenv("MINIO_ENDPOINT", "localhost:9000")      # Hôte MinIO
-MINIO_ACCESS_KEY   = os.getenv("MINIO_ACCESS_KEY", "minioadmin")        # Clé d’accès
-MINIO_SECRET_KEY   = os.getenv("MINIO_SECRET_KEY", "minioadmin")        # Clé secrète
-MINIO_BUCKET       = os.getenv("MINIO_BUCKET", "kyc-docs")              # Nom du bucket par défaut
-
+MINIO_ENDPOINT     = os.getenv("MINIO_ENDPOINT")
+MINIO_ACCESS_KEY   = os.getenv("MINIO_ACCESS_KEY")
+MINIO_SECRET_KEY   = os.getenv("MINIO_SECRET_KEY")
+MINIO_BUCKET       = os.getenv("MINIO_DOCS_BUCKET")             # Nom du bucket par défaut
+# Ajout de la vérification pour la robustesse
+if not all([MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_BUCKET]):
+    raise ValueError("Une ou plusieurs variables d'environnement MinIO sont manquantes.")
 # ────────────────────────────────────────────────────────────────
 # 2) Initialisation du client Boto3 pour MinIO
 # ────────────────────────────────────────────────────────────────

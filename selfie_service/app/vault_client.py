@@ -4,15 +4,12 @@ import hvac
 import os
 import base64  # <--- IMPORTER BASE64
 
-from dotenv import load_dotenv
-from pathlib import Path
 
-# Force le chemin : projet racine
-env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
-
-VAULT_ADDR = os.getenv("VAULT_ADDR", "http://127.0.0.1:8200")
-VAULT_TOKEN = os.getenv("VAULT_TOKEN", "root")
+VAULT_ADDR = os.getenv("VAULT_ADDR")
+VAULT_TOKEN = os.getenv("VAULT_TOKEN")
+# --- AJOUT DE LA VÉRIFICATION CRITIQUE ---
+if not VAULT_ADDR or not VAULT_TOKEN:
+    raise ValueError("Les variables d'environnement VAULT_ADDR ou VAULT_TOKEN sont manquantes.")
 
 client = hvac.Client(url=VAULT_ADDR, token=VAULT_TOKEN)
 

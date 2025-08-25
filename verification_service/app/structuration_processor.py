@@ -4,10 +4,14 @@ import requests
 import re
 from datetime import datetime
 import pytz
-import os 
+import os
 
+# --- CONFIGURATION OLLAMA (CORRIGÉE) ---
+OLLAMA_API_URL = os.getenv("OLLAMA_API_URL")
 
-OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://localhost:11434")
+# Ajout de la vérification critique
+if not OLLAMA_API_URL:
+    raise ValueError("La variable d'environnement OLLAMA_API_URL est manquante.")
 # --------------------------------------------------------------------------------
 # 1. FONCTION DE STRUCTURATION (Ollama - inchangée)
 # --------------------------------------------------------------------------------
@@ -48,7 +52,7 @@ Maintenant, analyse le texte OCR fourni ci-dessus et génère l'objet JSON corre
 Assure-toi que ta réponse est UNIQUEMENT l'objet JSON, sans texte explicatif avant ou après.
 """.strip()
     
-    url = "http://localhost:11434/api/generate"
+    url = f"{OLLAMA_API_URL}/api/generate"
     payload = {
         "model": model_name,
         "prompt": prompt,

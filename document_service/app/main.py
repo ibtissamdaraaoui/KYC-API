@@ -1,3 +1,11 @@
+# ------------------ BLOC DE CONFIGURATION CENTRALE ------------------
+import sys
+from pathlib import Path
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))
+from config import settings
+# --------------------------------------------------------------------
+
 # ───────────────────────────────────────────────
 # Imports standard & dépendances
 # ───────────────────────────────────────────────
@@ -6,7 +14,6 @@ import json
 import base64
 from datetime import datetime
 from app.vault_client import store_key_in_vault
-
 
 # FastAPI et SQLAlchemy
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
@@ -23,26 +30,26 @@ from kafka import KafkaProducer
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 
-
 # ───────────────────────────────────────────────
 # 1) Initialisation de la base (tables) au démarrage
 # ───────────────────────────────────────────────
-init_db()  # Crée la table 'documents' si elle n'existe pas
-
+init_db()
 
 # ───────────────────────────────────────────────
-# 2) Configuration Kafka
-#    • Topic           : document_uploaded
-#    • Broker par défaut: localhost:9092
+# 2) Configuration Kafka (CORRIGÉE)
+#    • Les valeurs proviennent maintenant du .env central
 # ───────────────────────────────────────────────
-KAFKA_TOPIC  = "document_uploaded"
-KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
+KAFKA_TOPIC = os.getenv("KAFKA_DOCUMENT_UPLOADED_TOPIC")
+KAFKA_BROKER = os.getenv("KAFKA_BROKER")
+
+# Vérification pour la robustesse (fail-fast)
+if not KAFKA_TOPIC or not KAFKA_BROKER:
+    raise ValueError("Les variables d'environnement KAFKA_DOCUMENT_UPLOADED_TOPIC ou KAFKA_BROKER sont manquantes.")
 
 producer = KafkaProducer(
     bootstrap_servers=KAFKA_BROKER.split(","),
     value_serializer=lambda v: json.dumps(v).encode("utf-8")
 )
-
 
 # ───────────────────────────────────────────────
 # 3) Initialisation FastAPI

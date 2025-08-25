@@ -1,11 +1,14 @@
 import os
 import base64
 import requests
-from dotenv import load_dotenv
-load_dotenv()
 
-VAULT_ADDR = os.getenv("VAULT_ADDR", "http://127.0.0.1:8200")
+
+VAULT_ADDR = os.getenv("VAULT_ADDR")
 VAULT_TOKEN = os.getenv("VAULT_TOKEN")
+
+# --- AJOUT DE LA VÉRIFICATION CRITIQUE ---
+if not VAULT_ADDR or not VAULT_TOKEN:
+    raise ValueError("Les variables d'environnement VAULT_ADDR ou VAULT_TOKEN sont manquantes.")
 
 def load_key_from_vault(vault_path: str) -> bytes:
     """

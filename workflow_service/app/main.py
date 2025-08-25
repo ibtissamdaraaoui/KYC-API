@@ -1,3 +1,12 @@
+# ------------------ BLOC DE CONFIGURATION CENTRALE ------------------
+import sys
+from pathlib import Path
+# Ajouter la racine du projet au PYTHONPATH
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))
+from config import settings # Charge la configuration
+# --------------------------------------------------------------------
+
 import threading
 from fastapi import FastAPI
 from app import models
