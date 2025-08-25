@@ -4,15 +4,17 @@ import os
 import boto3
 from botocore.client import Config
 
-# (optionnel) si vous chargez un .env
-# from dotenv import load_dotenv
-# load_dotenv()
+
 
 # ─────────── Paramètres MinIO (S3-compatible) ───────────
-MINIO_ENDPOINT   = os.getenv("MINIO_ENDPOINT", "localhost:9000")
-MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
-MINIO_BUCKET     = os.getenv("MINIO_BUCKET", "kyc-docs")
+MINIO_ENDPOINT   = os.getenv("MINIO_ENDPOINT")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY")
+MINIO_BUCKET     = os.getenv("MINIO_DOCS_BUCKET")
+
+# --- AJOUT DE LA VÉRIFICATION CRITIQUE ---
+if not all([MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_BUCKET]):
+    raise ValueError("Une ou plusieurs variables d'environnement MinIO sont manquantes.")
 
 # ─────────── Création du client Boto3 pour MinIO ───────────
 s3_client = boto3.client(

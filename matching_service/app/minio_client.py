@@ -4,12 +4,6 @@ import os
 import boto3
 from botocore.client import Config
 
-# Essayer de charger les variables depuis un fichier .env (utile pour le développement local)
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
 
 # ─────────────────── Paramètres de connexion à MinIO ───────────────────
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT")
@@ -18,8 +12,8 @@ MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY")
 
 # --- Configuration des NOMS DE BUCKETS (MODIFIÉ) ---
 # On définit un nom pour chaque type de ressource.
-MINIO_DOCS_BUCKET = os.getenv("MINIO_DOCS_BUCKET", "kyc-docs")
-MINIO_SELFIES_BUCKET = os.getenv("MINIO_SELFIES_BUCKET", "kyc-selfies")
+MINIO_DOCS_BUCKET = os.getenv("MINIO_DOCS_BUCKET")
+MINIO_SELFIES_BUCKET = os.getenv("MINIO_SELFIES_BUCKET")
 
 # --- Vérification critique au démarrage ---
 # Si une variable essentielle manque, le service s'arrête avec un message clair.

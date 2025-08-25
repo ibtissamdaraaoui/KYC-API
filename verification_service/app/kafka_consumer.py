@@ -1,3 +1,11 @@
+# ------------------ BLOC DE CONFIGURATION CENTRALE ------------------
+import sys
+from pathlib import Path
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))
+from config import settings
+# --------------------------------------------------------------------
+
 import os
 import json
 import pprint
@@ -11,34 +19,48 @@ from app.processor import fetch_and_decrypt_images
 from app.ocr_processor import run_ocr_on_image_bytes
 from app.structuration_processor import process_structuration
 
-# ─────────────── Paramètres Kafka ───────────────
-KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "document_uploaded")
-KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
-KAFKA_GROUP_ID = os.getenv("KAFKA_GROUP_ID", "verification_group_v2")
+# ─────────────── Paramètres Kafka (CORRIGÉE) ───────────────
+# On lit toutes les variables depuis le .env SANS valeurs par défaut
+KAFKA_CONSUMER_TOPIC = os.getenv("KAFKA_DOCUMENT_UPLOADED_TOPIC")
+KAFKA_BROKER = os.getenv("KAFKA_BROKER")
+KAFKA_GROUP_ID = os.getenv("KAFKA_GROUP_ID") # Assurez-vous d'avoir une variable KAFKA_GROUP_ID dans votre .env
+KAFKA_SUCCESS_TOPIC = os.getenv("KAFKA_DOCUMENT_VERIFIED_TOPIC")
+KAFKA_FAILURE_TOPIC = os.getenv("KAFKA_FAILURE_TOPIC")
 
-# -------MODIFICATION: Ajout du topic pour le producteur --
-KAFKA_SUCCESS_TOPIC = os.getenv("KAFKA_VERIFIED_TOPIC", "document_verified")
-KAFKA_FAILURE_TOPIC = os.getenv("KAFKA_FAILURE_TOPIC", "kyc_case_failed")
+
+# On vérifie que TOUTES les variables nécessaires sont bien présentes
+required_vars = {
+    "KAFKA_DOCUMENT_UPLOADED_TOPIC": KAFKA_CONSUMER_TOPIC,
+    "KAFKA_BROKER": KAFKA_BROKER,
+    "KAFKA_GROUP_ID": KAFKA_GROUP_ID,
+    "KAFKA_DOCUMENT_VERIFIED_TOPIC": KAFKA_SUCCESS_TOPIC,
+    "KAFKA_FAILURE_TOPIC": KAFKA_FAILURE_TOPIC
+}
+missing_vars = [key for key, value in required_vars.items() if not value]
+if missing_vars:
+    raise ValueError(f"ERREUR: Variables d'environnement Kafka manquantes : {', '.join(missing_vars)}")
+
 
 # ─────────────── Initialisation du consommateur ───────────────
+# On utilise maintenant la variable corrigée KAFKA_CONSUMER_TOPIC
 consumer = KafkaConsumer(
-    KAFKA_TOPIC,
+    KAFKA_CONSUMER_TOPIC,
     bootstrap_servers=KAFKA_BROKER.split(","),
     group_id=KAFKA_GROUP_ID,
     value_deserializer=lambda m: json.loads(m.decode("utf-8")),
     auto_offset_reset="latest",
     enable_auto_commit=False,
-    session_timeout_ms=60000,  # 2. Augmente le timeout de session à 60 secondes.
+    session_timeout_ms=60000,
     max_poll_interval_ms=600000
 )
 
-# MODIFICATION: Initialisation du producteur
+# ─────────────── Initialisation du producteur ───────────────
 producer = KafkaProducer(
     bootstrap_servers=KAFKA_BROKER.split(","),
-    value_serializer=lambda v: json.dumps(v).encode("utf-8") # Sérialiseur pour convertir le dict en JSON
+    value_serializer=lambda v: json.dumps(v).encode("utf-8")
 )
 
-print(f"[Kafka] En écoute sur le topic '{KAFKA_TOPIC}'...")
+print(f"[Kafka] En écoute sur le topic '{KAFKA_CONSUMER_TOPIC}'...")
 
 # ─────────────── Boucle d’écoute ───────────────
 for message in consumer:

@@ -1,5 +1,7 @@
 # Fichier: workflow_service/app/kafka_consumer.py
 
+
+
 import os
 import json
 import pprint
@@ -17,20 +19,27 @@ from app.models import KycCaseStatus
 # ──────────────────────────────────────────────────────────────────
 #  FONCTION PRINCIPALE DE CONSOMMATION
 # ──────────────────────────────────────────────────────────────────
-def consume_workflow_events(): # Nom plus générique car on gère succès et échecs
-    """
-    Cette fonction s'exécute dans un thread d'arrière-plan et écoute les topics
-    de statut (succès/échec) pour mettre à jour l'état des cas KYC.
-    """
+def consume_workflow_events():
     thread_id = threading.get_ident()
     print(f"[Thread-{thread_id}] Démarrage du consommateur Kafka pour le workflow_service...")
 
-    # ─────────────── Paramètres Kafka ───────────────
-    KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
-    KAFKA_FAILURE_TOPIC = os.getenv("KAFKA_FAILURE_TOPIC", "kyc_case_failed")
-    # NOUVEAU: Topic pour les succès de matching
-    KAFKA_MATCHING_SUCCESS_TOPIC = os.getenv("KAFKA_MATCHING_SUCCESS_TOPIC", "matching_completed")
-    KAFKA_GROUP_ID = os.getenv("KAFKA_GROUP_ID_WORKFLOW", "workflow_group")
+    # ─────────────── Paramètres Kafka (CORRIGÉE) ───────────────
+    KAFKA_BROKER = os.getenv("KAFKA_BROKER")
+    KAFKA_FAILURE_TOPIC = os.getenv("KAFKA_FAILURE_TOPIC")
+    KAFKA_MATCHING_SUCCESS_TOPIC = os.getenv("KAFKA_MATCHING_SUCCESS_TOPIC")
+    # Utiliser une clé cohérente avec les autres services si possible
+    KAFKA_GROUP_ID = os.getenv("KAFKA_GROUP_ID", "workflow_group") # Garder une valeur par défaut ici est acceptable si non critique
+
+    # --- VÉRIFICATION CRITIQUE ---
+    required_vars = {
+        "KAFKA_BROKER": KAFKA_BROKER,
+        "KAFKA_FAILURE_TOPIC": KAFKA_FAILURE_TOPIC,
+        "KAFKA_MATCHING_SUCCESS_TOPIC": KAFKA_MATCHING_SUCCESS_TOPIC,
+        "KAFKA_GROUP_ID": KAFKA_GROUP_ID
+    }
+    missing_vars = [key for key, value in required_vars.items() if not value]
+    if missing_vars:
+        raise ValueError(f"ERREUR: Variables d'environnement Kafka manquantes pour le workflow_service : {', '.join(missing_vars)}")
 
     # ─────────────── Initialisation du consommateur ───────────────
     consumer = None
