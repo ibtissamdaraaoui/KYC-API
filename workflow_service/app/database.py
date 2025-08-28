@@ -16,6 +16,6 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 def init_db():
-    from app.models import KycCase
-    Base.metadata.create_all(bind=engine, tables=[KycCase.__table__])
+    from app.models import KycCase ,ApiClient
+    Base.metadata.create_all(bind=engine, tables=[KycCase.__table__,ApiClient.__table__])
     print("Table 'kyc_cases' initialisée par le workflow_service.")

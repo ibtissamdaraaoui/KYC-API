@@ -6,6 +6,7 @@ import requests
 
 from app.router.case import get_db 
 from app.crud import get_and_validate_case_for_upload
+from app.security import get_current_client_id  
 
 router = APIRouter()
 
@@ -18,7 +19,8 @@ async def proxy_upload(
     kyc_case_id: str = Form(...),
     recto: UploadFile = File(...),
     verso: UploadFile = File(...),
-    db: Session = Depends(get_db) # <-- AJOUT DE LA DÉPENDANCE À LA BDD
+    db: Session = Depends(get_db), # <-- AJOUT DE LA DÉPENDANCE À LA BDD
+    client_id: str = Depends(get_current_client_id)  
 ):
     """Transfère l'upload vers le document_service après validation du cas."""
     
@@ -41,7 +43,8 @@ async def proxy_upload(
 async def proxy_upload_selfie(
     kyc_case_id: str = Form(...),
     selfie: UploadFile = File(...),
-    db: Session = Depends(get_db) # <-- AJOUT DE LA DÉPENDANCE À LA BDD
+    db: Session = Depends(get_db),# <-- AJOUT DE LA DÉPENDANCE À LA BDD
+    client_id: str = Depends(get_current_client_id)  
 ):
     """Transfère l'upload vers le selfie_service après validation du cas."""
     

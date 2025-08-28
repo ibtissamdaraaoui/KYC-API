@@ -30,6 +30,22 @@ class KycCase(Base):
     documents = relationship("Document")
     selfies = relationship("Selfie")
 
+
+# --- AJOUTER OU MODIFIER CE MODÈLE ---
+class ApiClient(Base):
+    __tablename__ = "api_clients"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    client_name = Column(String, unique=True, index=True)
+    hashed_password = Column(String, nullable=False)
+    application_id = Column(String, unique=True, index=True)
+    
+    # LIGNE CRUCIALE À AJOUTER :
+    jwt_secret = Column(String, nullable=False, unique=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    
 # Modèles miroirs (inchangés)
 class Document(Base):
     __tablename__ = "documents"
