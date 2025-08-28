@@ -11,7 +11,7 @@ import threading
 from fastapi import FastAPI
 from app import models
 from app.database import engine
-from app.router import case, proxy
+from app.router import case, proxy,auth
 from app.kafka_consumer import consume_workflow_events# MODIFICATION
 from app.database import init_db
 # --- CORRECTION : Appeler la fonction d'initialisation contrôlée ---
@@ -30,5 +30,6 @@ def on_startup():
     consumer_thread.start()
 
 # Routes
-app.include_router(case.router, prefix="/kyc-case", tags=["KYC Case"])
-app.include_router(proxy.router, prefix="/proxy", tags=["Proxy Upload"])
+app.include_router(case.router, tags=["KYC Case"])
+app.include_router(proxy.router, tags=["Proxy Upload"])
+app.include_router(auth.router, tags=["Authentification"])
