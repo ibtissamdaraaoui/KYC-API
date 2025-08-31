@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from uuid import uuid4
 from app.database import SessionLocal
 from app import models, schemas
+from app.security import get_current_client_id
 
 router = APIRouter()
 
@@ -16,7 +17,10 @@ def get_db():
         db.close()
 
 @router.post("/", response_model=schemas.KycCaseCreate)
-def create_case(db: Session = Depends(get_db)):
+def create_case(
+    db: Session = Depends(get_db),
+    client_id: str = Depends(get_current_client_id)
+    ):
     """
     Crée un nouveau cas KYC avec un kyc_case_id garanti unique.
     """
@@ -42,19 +46,32 @@ def create_case(db: Session = Depends(get_db)):
     # --- FIN DE LA MODIFICATION ---
 
     # Le reste du code utilise maintenant l'ID garanti unique
-    new_case = models.KycCase(kyc_case_id=kyc_case_id)
+    new_case = models.KycCase(
+        kyc_case_id=kyc_case_id,
+        owner_id=client_id
+        )
     db.add(new_case)
     db.commit()
     db.refresh(new_case)
     
     return new_case
+
+
+
 @router.get("/{kyc_case_id}/status", response_model=schemas.KycCaseStatusResponse)
-def get_case_status(kyc_case_id: str, db: Session = Depends(get_db)):
+def get_case_status(
+    kyc_case_id: str,
+    db: Session = Depends(get_db),
+    client_id: str = Depends(get_current_client_id)
+    ):
     """
     Récupère le statut actuel d'un cas KYC.
     Le client peut appeler cette route en boucle (polling) pour obtenir le résultat final.
     """
-    case = db.query(models.KycCase).filter(models.KycCase.kyc_case_id == kyc_case_id).first()
+    case = db.query(models.KycCase).filter(
+        models.KycCase.kyc_case_id == kyc_case_id,
+        models.KycCase.owner_id == client_id 
+    ).first()
     
     if not case:
         raise HTTPException(status_code=404, detail="KYC Case not found")

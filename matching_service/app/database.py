@@ -3,6 +3,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+import logging
 
 
 
@@ -21,4 +22,4 @@ def init_db():
     from app.models import MatchingTask, MatchingResult
     tables_to_create = [MatchingTask.__table__, MatchingResult.__table__]
     Base.metadata.create_all(bind=engine, tables=tables_to_create)
-    print("Tables 'matching_tasks' et 'matching_results' initialisées par le matching_service.")
+    logging.info("Tables 'matching_tasks' et 'matching_results' initialisées par le matching_service.")

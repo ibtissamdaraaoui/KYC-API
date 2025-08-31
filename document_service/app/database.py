@@ -3,6 +3,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import logging
 
 # Lire la variable d'environnement chargée par le point d'entrée de l'application
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -18,4 +19,4 @@ Base = declarative_base()
 def init_db():
     from app.models import Document
     Base.metadata.create_all(bind=engine, tables=[Document.__table__])
-    print("Table 'documents' initialisée par le document_service.")
+    logging.info("Table 'documents' initialisée par le document_service.")

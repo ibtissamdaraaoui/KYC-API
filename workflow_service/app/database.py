@@ -3,6 +3,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import logging
 
 # Lire la variable d'environnement chargée par le point d'entrée de l'application
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -18,4 +19,4 @@ Base = declarative_base()
 def init_db():
     from app.models import KycCase ,ApiClient
     Base.metadata.create_all(bind=engine, tables=[KycCase.__table__,ApiClient.__table__])
-    print("Table 'kyc_cases' initialisée par le workflow_service.")
+    logging.info("Table 'kyc_cases' initialisée par le workflow_service.")

@@ -6,6 +6,7 @@ import requests # Assurez-vous que 'requests' est dans votre requirements.txt
 # Récupérés depuis les variables d'environnement chargées au démarrage du service.
 VAULT_ADDR = os.getenv("VAULT_ADDR")
 VAULT_TOKEN = os.getenv("VAULT_TOKEN")
+import logging
 
 # Vérification critique au démarrage du service
 if not VAULT_ADDR or not VAULT_TOKEN:
@@ -37,7 +38,7 @@ def load_key_from_vault(vault_path: str) -> bytes:
     url = f"{VAULT_ADDR}/v1/{api_path}"
     headers = {"X-Vault-Token": VAULT_TOKEN}
     
-    print(f"   - Appel à l'API Vault : GET {url}")
+    logging.info(f"   - Appel à l'API Vault : GET {url}")
 
     try:
         # --- Exécution de l'appel à l'API ---

@@ -3,6 +3,7 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.models import KycCase, KycCaseStatus  # <-- L'IMPORT FONCTIONNE MAINTENANT ICI
+import logging
 
 def get_and_validate_case_for_upload(db: Session, kyc_case_id: str) -> KycCase:
     """
@@ -36,8 +37,8 @@ def update_kyc_case_status(db: Session, kyc_case_id: str, status: KycCaseStatus,
             db_case.failure_reason = reason
         db.commit()
         db.refresh(db_case)
-        print(f"Cas KYC '{kyc_case_id}' mis à jour avec le statut '{status.value}'.")
+        logging.info(f"Cas KYC '{kyc_case_id}' mis à jour avec le statut '{status.value}'.")
         return db_case
     else:
-        print(f"[ERREUR] Cas KYC '{kyc_case_id}' non trouvé pour la mise à jour.")
+        logging.info(f"[ERREUR] Cas KYC '{kyc_case_id}' non trouvé pour la mise à jour.")
         return None

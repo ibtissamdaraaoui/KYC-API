@@ -3,7 +3,7 @@
 import os
 import boto3
 from botocore.client import Config
-
+import logging 
 
 # ─────────────────── Paramètres de connexion à MinIO ───────────────────
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT")
@@ -43,11 +43,11 @@ try:
     )
     
     # Message de confirmation dans les logs
-    print(f"✅ Client MinIO initialisé. Connexion à l'endpoint: '{endpoint_url}'")
-    print(f"   - Bucket Documents: '{MINIO_DOCS_BUCKET}'")
-    print(f"   - Bucket Selfies:   '{MINIO_SELFIES_BUCKET}'")
+    logging.info(f"✅ Client MinIO initialisé. Connexion à l'endpoint: '{endpoint_url}'")
+    logging.info(f"   - Bucket Documents: '{MINIO_DOCS_BUCKET}'")
+    logging.info(f"   - Bucket Selfies:   '{MINIO_SELFIES_BUCKET}'")
 
 except Exception as e:
-    print(f"❌ ERREUR CRITIQUE: Impossible d'initialiser le client MinIO. Erreur: {e}")
+    logging.error(f"❌ ERREUR CRITIQUE: Impossible d'initialiser le client MinIO. Erreur: {e}")
     # Relance l'exception pour arrêter le démarrage du conteneur si la connexion échoue.
     raise

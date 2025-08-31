@@ -5,7 +5,11 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
 from config import settings # Charge la configuration
+from config.logging_config import setup_logging # <-- IMPORTER
+import logging # <-- IMPORTER
 # --------------------------------------------------------------------
+# --- CONFIGURER LE LOGGING ---
+setup_logging("workflow_service")
 
 import threading
 from fastapi import FastAPI
@@ -14,6 +18,7 @@ from app.database import engine
 from app.router import case, proxy,auth
 from app.kafka_consumer import consume_workflow_events# MODIFICATION
 from app.database import init_db
+
 # --- CORRECTION : Appeler la fonction d'initialisation contrôlée ---
 init_db()
 
@@ -22,7 +27,7 @@ app = FastAPI(title="workflow_service")
 @app.on_event("startup")
 def on_startup():
     """Lance le consommateur Kafka dans un thread d'arrière-plan."""
-    print("API starting up... Launching Kafka consumer thread.")
+    logging.info("API starting up... Launching Kafka consumer thread.")
     consumer_thread = threading.Thread(
         target=consume_workflow_events,
         daemon=True  # Permet à l'application de quitter même si le thread tourne

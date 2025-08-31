@@ -1,0 +1,29 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: kyc-services
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: kyc_project
+          # On dit à Promtail de scanner tous les fichiers .log
+          # qui se trouvent dans les sous-dossiers.
+          __path__: /var/log/kyc_project_logs/*/*.log
+    
+    pipeline_stages:
+      - regex:
+          # On capture le nom du dossier qui se trouve juste APRES "kyc_project_logs/".
+          # C'est une regex simple pour les chemins Linux.
+          expression: '.*/kyc_project_logs/(?P<service>[^/]+)/.*'
+      - labels:
+          # On crée un label nommé "service" à partir du groupe capturé.
+          service:

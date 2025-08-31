@@ -1,0 +1,48 @@
+# Fichier: loki-config.yaml
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+
+ingester:
+  lifecycler:
+    address: 127.0.0.1
+    ring:
+      kvstore:
+        store: inmemory
+      replication_factor: 1
+    final_sleep: 0s
+  chunk_idle_period: 1h
+  chunk_target_size: 1024000
+  chunk_retain_period: 30s
+  max_transfer_retries: 0
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /loki/boltdb-shipper-active
+    cache_location: /loki/boltdb-shipper-cache
+    shared_store: filesystem
+  filesystem:
+    directory: /loki/chunks
+
+# --- C'EST LA PARTIE LA PLUS IMPORTANTE ---
+compactor:
+  working_directory: /loki/boltdb-shipper-compactor
+  shared_store: filesystem
+  retention_enabled: true         # On active la rétention
+  retention_delete_delay: 2h      # Délai avant de supprimer après marquage
+  retention_delete_worker_count: 150
+
+table_manager:
+  retention_deletes_enabled: true # On active la suppression
+  retention_period: 24h           # On garde les logs pendant 24 heures
