@@ -18,7 +18,7 @@ class VerificationResult(Base):
     document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
     status = Column(String, nullable=False)
     raw_text = Column(Text)
-    structured_data = Column(JSON) # Utiliser JSON est plus propre que Text
+    structured_data = Column(Text) # Utiliser JSON est plus propre que Text
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     document = relationship("Document")

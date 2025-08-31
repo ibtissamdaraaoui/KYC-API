@@ -23,7 +23,8 @@ from sqlalchemy.orm import Session
 # Modules internes du microservice
 from app import models
 from app.database import SessionLocal, init_db
-
+from config.logging_config import setup_logging
+import logging
 
 from app.database import SessionLocal, init_db
 from app.models import Selfie
@@ -34,7 +35,7 @@ from app.minio_client import s3_client, MINIO_BUCKET
 from kafka import KafkaProducer
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
-
+setup_logging("selfie_service")
 
 # ───────────────────────────────────────────────
 # 1) Initialisation de la base (tables) au démarrage
@@ -84,7 +85,7 @@ async def upload_selfie(
     kyc_case_id: str = Form(...),
     selfie: UploadFile = File(...)
 ):
-    print("➡️ Reçu selfie pour KYC ID:", kyc_case_id)
+    logging.info("➡️ Reçu selfie pour KYC ID:", kyc_case_id)
 
     # Vérification extension
     if not selfie.filename.lower().endswith((".jpg", ".jpeg", ".png")):
@@ -92,14 +93,14 @@ async def upload_selfie(
 
     # Génère clé AES
     encryption_key = os.urandom(32)
-    print("➡️ Clé AES générée")
+    logging.info("➡️ Clé AES générée")
 
     vault_key_path = store_key_in_vault(kyc_case_id, encryption_key)
-    print("➡️ Clé stockée dans Vault:", vault_key_path)
+    logging.info("➡️ Clé stockée dans Vault:", vault_key_path)
 
     raw_data = await selfie.read()
     encrypted = encrypt_file_aes256(raw_data, encryption_key)
-    print("➡️ Chiffrement OK")
+    logging.info("➡️ Chiffrement OK")
 
     s3_key = f"{datetime.utcnow().timestamp()}_{selfie.filename}"
 
@@ -111,7 +112,7 @@ async def upload_selfie(
     metadata={"encrypted": "true", "algorithm": "AES-256"}
     )
 
-    print("➡️ Upload MinIO OK")
+    logging.info("➡️ Upload MinIO OK")
 
     db: Session = SessionLocal()
     selfie_db = Selfie(
@@ -123,7 +124,7 @@ async def upload_selfie(
     db.commit()
     db.refresh(selfie_db)
     db.close()
-    print("➡️ Sauvegarde DB OK")
+    logging.info("➡️ Sauvegarde DB OK")
 
     payload = {
         "id": selfie_db.id,
@@ -134,6 +135,6 @@ async def upload_selfie(
 
     producer.send(KAFKA_TOPIC, payload)
     producer.flush()
-    print("➡️ Message Kafka OK")
+    logging.info("➡️ Message Kafka OK")
 
     return selfie_db

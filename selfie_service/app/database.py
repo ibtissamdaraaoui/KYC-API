@@ -2,6 +2,7 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+import logging
 
 # Lire la variable d'environnement chargée par le point d'entrée de l'application
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -17,4 +18,4 @@ Base = declarative_base()
 def init_db():
     from app.models import Selfie
     Base.metadata.create_all(bind=engine, tables=[Selfie.__table__])
-    print("Table 'selfies' initialisée par le selfie_service.")
+    logging.info("Table 'selfies' initialisée par le selfie_service.")

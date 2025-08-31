@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 networks:
   app-network:
@@ -148,6 +148,35 @@ services:
       - kong-gateway-instance
       - konga_main_db_instance
     restart: always
+    networks:
+      - app-network
+  
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    networks:
+      - app-network
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      # --- MODIFICATION IMPORTANTE ---
+      # On monte le dossier de logs unique de la racine du projet
+      # à l'intérieur du conteneur promtail.
+      - ./logs:/var/log/kyc_project_logs:ro
+      - ./promtail-config.yaml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - app-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
     networks:
       - app-network
 

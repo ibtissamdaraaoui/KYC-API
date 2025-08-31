@@ -29,9 +29,9 @@ try:
     s3_client.head_bucket(Bucket=MINIO_BUCKET)
 except s3_client.exceptions.ClientError as e:
     # Bucket inexistant → on le crée
-    print(f"[MinIO] Bucket '{MINIO_BUCKET}' introuvable. Création en cours...")
+    logging.info(f"[MinIO] Bucket '{MINIO_BUCKET}' introuvable. Création en cours...")
     s3_client.create_bucket(Bucket=MINIO_BUCKET)
-    print(f"[MinIO] Bucket '{MINIO_BUCKET}' créé avec succès.")
+    logging.info(f"[MinIO] Bucket '{MINIO_BUCKET}' créé avec succès.")
 except Exception as e:
-    print(f"[MinIO] ❌ Erreur inattendue lors de la vérification du bucket : {e}")
+    logging.error(f"[MinIO] ❌ Erreur inattendue lors de la vérification du bucket : {e}")
     raise

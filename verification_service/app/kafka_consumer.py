@@ -4,20 +4,26 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
 from config import settings
+from config.logging_config import setup_logging
+import logging
+setup_logging("verification_service")
 # --------------------------------------------------------------------
 
 import os
 import json
 import pprint
 from kafka import KafkaConsumer, KafkaProducer
+ 
 
 from app import database, models
 from app.database import SessionLocal
 from app.schemas import VerificationResultCreate
 from app.crud import create_verification_result  # Appel de la fonction d’insertion
 from app.processor import fetch_and_decrypt_images
+from app.encryption_utils import encrypt_data 
 from app.ocr_processor import run_ocr_on_image_bytes
 from app.structuration_processor import process_structuration
+
 
 # ─────────────── Paramètres Kafka (CORRIGÉE) ───────────────
 # On lit toutes les variables depuis le .env SANS valeurs par défaut
@@ -60,7 +66,7 @@ producer = KafkaProducer(
     value_serializer=lambda v: json.dumps(v).encode("utf-8")
 )
 
-print(f"[Kafka] En écoute sur le topic '{KAFKA_CONSUMER_TOPIC}'...")
+logging.info(f"[Kafka] En écoute sur le topic '{KAFKA_CONSUMER_TOPIC}'...")
 
 # ─────────────── Boucle d’écoute ───────────────
 for message in consumer:
@@ -69,11 +75,11 @@ for message in consumer:
     file_keys = payload.get("file_path")
     kyc_case_id = payload.get("kyc_case_id")  # 
 
-    print("\n===== Nouveau message Kafka reçu =====")
-    print(f"ID Document     : {doc_id}")
-    print(f"KYC Case ID     : {kyc_case_id}")
-    print(f"Clés MinIO      : {file_keys}")
-    print("=========================================\n")
+    logging.info("\n===== Nouveau message Kafka reçu =====")
+    logging.info(f"ID Document     : {doc_id}")
+    logging.info(f"KYC Case ID     : {kyc_case_id}")
+    logging.info(f"Clés MinIO      : {file_keys}")
+    logging.info("=========================================\n")
 
     try:
         # ────────── 1. Récupération & déchiffrement ──────────
@@ -86,31 +92,43 @@ for message in consumer:
         recto_text_str = "\n".join(recto_text)
         verso_text_str = "\n".join(verso_text)
 
-        print(" Résultat OCR - Recto :")
-        print(recto_text_str or "[Aucun texte détecté]")
-        print("\n Résultat OCR - Verso :")
-        print(verso_text_str or "[Aucun texte détecté]")
-
+        logging.info(" Résultat OCR - Recto :")
+        logging.info(recto_text_str or "[Aucun texte détecté]")
+        logging.info("\n Résultat OCR - Verso :")
+        logging.info(verso_text_str or "[Aucun texte détecté]")
         # ────────── 3. Structuration via Ollama ──────────
         rapport_validation = process_structuration(recto_text_str, verso_text_str)
         pprint.pprint(rapport_validation)
 
+        # --- DÉBUT DE LA SECTION DE CHIFFREMENT ET SAUVEGARDE ---
+
+        # On combine les textes bruts
+        full_raw_text = recto_text_str + "\n" + verso_text_str
+
+        # On convertit le rapport (dictionnaire) en chaîne de caractères JSON
+        structured_data_as_json_string = json.dumps(rapport_validation)
+
+        # On chiffre les deux chaînes de caractères
+        encrypted_raw_text = encrypt_data(full_raw_text)
+        encrypted_structured_data = encrypt_data(structured_data_as_json_string)
+
         # ────────── 4. Enregistrement base de données ──────────
         db = SessionLocal()
 
+        # On crée l'objet Pydantic avec les données chiffrées (qui sont des strings)
         verification_data = VerificationResultCreate(
-            document_id=doc_id, # C'est maintenant le champ principal
-            raw_text=recto_text_str + "\n" + verso_text_str,
-            structured_data=rapport_validation, # Passer le dictionnaire directement
+            document_id=doc_id,
+            raw_text=encrypted_raw_text,
+            structured_data=encrypted_structured_data, # C'est maintenant une chaîne, conforme au schéma
             status=rapport_validation.get("status_validation", "NON_VALIDÉ")
         )
-        
+
         # Appeler la fonction CRUD
         create_verification_result(db, verification_data)
         
         db.close()
 
-        print("Résultat structuré stocké avec succès.\n")
+        logging.info("Résultat structuré stocké avec succès.\n")
 
 
         # ------------------------------------------------------------------
@@ -120,7 +138,7 @@ for message in consumer:
 
         if status == "VALIDÉ":
             # --- CAS SUCCÈS ---
-            print(f"--> Statut VALIDÉ. Envoi du message au topic '{KAFKA_SUCCESS_TOPIC}'...")
+            logging.info(f"--> Statut VALIDÉ. Envoi du message au topic '{KAFKA_SUCCESS_TOPIC}'...")
             
             keys = file_keys.split("|")
             recto_key, verso_key = keys if len(keys) == 2 else (None, None)
@@ -135,12 +153,12 @@ for message in consumer:
                 }
             }
             producer.send(KAFKA_SUCCESS_TOPIC, value=success_payload)
-            print("--> Message de succès envoyé.")
+            logging.info("--> Message de succès envoyé.")
             pprint.pprint(success_payload)
 
         else:
             # --- CAS ÉCHEC ---
-            print(f"--> Statut NON_VALIDÉ. Envoi du message au topic '{KAFKA_FAILURE_TOPIC}'...")
+            logging.info(f"--> Statut NON_VALIDÉ. Envoi du message au topic '{KAFKA_FAILURE_TOPIC}'...")
 
             # On envoie un payload riche en informations pour le débogage et la notification utilisateur
             failure_payload = {
@@ -150,22 +168,22 @@ for message in consumer:
                 "details": rapport_validation.get("errors_details", {})
             }
             producer.send(KAFKA_FAILURE_TOPIC, value=failure_payload)
-            print("--> Message d'échec envoyé.")
+            logging.info("--> Message d'échec envoyé.")
             pprint.pprint(failure_payload)
 
         producer.flush() # Forcer l'envoi
-        print("-" * 50)
+        logging.info("-" * 50)
          # ==========================================================
         # AJOUT CRUCIAL : On commit l'offset manuellement ICI
         # Cela dit à Kafka : "Le traitement de ce message est terminé avec succès.
         # Ne me le renvoyez plus."
         # ==========================================================
         consumer.commit()
-        print("Offset commité avec succès. En attente du prochain message.")
+        logging.info("Offset commité avec succès. En attente du prochain message.")
 
     except Exception as e:
         # Gérer les erreurs techniques (ex: MinIO inaccessible) en publiant aussi un échec
-        print(f" Erreur technique majeure lors du traitement du document {doc_id}: {e}")
+        logging.error(f" Erreur technique majeure lors du traitement du document {doc_id}: {e}")
         failure_payload = {
             "kyc_case_id": kyc_case_id,
             "failed_service": "verification_service",

@@ -3,6 +3,7 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends 
 from sqlalchemy.orm import Session 
 import requests
+import logging
 
 from app.router.case import get_db 
 from app.crud import get_and_validate_case_for_upload

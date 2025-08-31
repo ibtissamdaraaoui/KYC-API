@@ -22,7 +22,7 @@ class VerificationResultCreate(BaseModel):
     raw_text: str
 
     # Données structurées et rapport de validation complet (de l'IA), stocké en JSON
-    structured_data: Dict[str, Any]
+    structured_data: str 
 
 
 # =====================================================================

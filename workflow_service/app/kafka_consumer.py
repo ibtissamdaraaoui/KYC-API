@@ -1,12 +1,10 @@
 # Fichier: workflow_service/app/kafka_consumer.py
-
-
-
 import os
 import json
 import pprint
 import threading
 import time
+import logging
 
 from kafka import KafkaConsumer
 from kafka.errors import NoBrokersAvailable
@@ -21,21 +19,21 @@ from app.models import KycCaseStatus
 # ──────────────────────────────────────────────────────────────────
 def consume_workflow_events():
     thread_id = threading.get_ident()
-    print(f"[Thread-{thread_id}] Démarrage du consommateur Kafka pour le workflow_service...")
+    logging.info(f"[Thread-{thread_id}] Démarrage du consommateur Kafka pour le workflow_service...")
 
     # ─────────────── Paramètres Kafka (CORRIGÉE) ───────────────
     KAFKA_BROKER = os.getenv("KAFKA_BROKER")
     KAFKA_FAILURE_TOPIC = os.getenv("KAFKA_FAILURE_TOPIC")
     KAFKA_MATCHING_SUCCESS_TOPIC = os.getenv("KAFKA_MATCHING_SUCCESS_TOPIC")
-    # Utiliser une clé cohérente avec les autres services si possible
-    KAFKA_GROUP_ID = os.getenv("KAFKA_GROUP_ID", "workflow_group") # Garder une valeur par défaut ici est acceptable si non critique
+    KAFKA_GROUP_ID = os.getenv("KAFKA_WORKFLOW_GROUP_ID") 
+    
 
     # --- VÉRIFICATION CRITIQUE ---
     required_vars = {
         "KAFKA_BROKER": KAFKA_BROKER,
         "KAFKA_FAILURE_TOPIC": KAFKA_FAILURE_TOPIC,
         "KAFKA_MATCHING_SUCCESS_TOPIC": KAFKA_MATCHING_SUCCESS_TOPIC,
-        "KAFKA_GROUP_ID": KAFKA_GROUP_ID
+        "KAFKA_WORKFLOW_GROUP_ID": KAFKA_GROUP_ID
     }
     missing_vars = [key for key, value in required_vars.items() if not value]
     if missing_vars:
@@ -57,12 +55,12 @@ def consume_workflow_events():
                 # On passe au commit manuel pour plus de robustesse
                 enable_auto_commit=False,
             )
-            print(f"[Thread-{thread_id}] Connecté à Kafka. En écoute sur les topics: {topics_to_consume}...")
+            logging.info(f"[Thread-{thread_id}] Connecté à Kafka. En écoute sur les topics: {topics_to_consume}...")
         except NoBrokersAvailable:
-            print(f"[Thread-{thread_id}] [ERREUR] Impossible de se connecter à Kafka. Nouvelle tentative dans 5s...")
+            logging.info(f"[Thread-{thread_id}] [ERREUR] Impossible de se connecter à Kafka. Nouvelle tentative dans 5s...")
             time.sleep(5)
         except Exception as e:
-            print(f"[Thread-{thread_id}] [ERREUR] Erreur de connexion à Kafka: {e}")
+            logging.info(f"[Thread-{thread_id}] [ERREUR] Erreur de connexion à Kafka: {e}")
             time.sleep(5)
             
     # ─────────────── Boucle d’écoute principale ───────────────
@@ -72,7 +70,7 @@ def consume_workflow_events():
             kyc_case_id = payload.get("kyc_case_id")
 
             if not kyc_case_id:
-                print(f"[Thread-{thread_id}] [AVERTISSEMENT] Message reçu sans kyc_case_id. Message ignoré.")
+                logging.info(f"[Thread-{thread_id}] [AVERTISSEMENT] Message reçu sans kyc_case_id. Message ignoré.")
                 consumer.commit() # On commit pour ne pas le relire
                 continue
 
@@ -81,11 +79,11 @@ def consume_workflow_events():
                 # --- LOGIQUE D'AIGUILLAGE BASÉE SUR LE TOPIC ---
                 if message.topic == KAFKA_FAILURE_TOPIC:
                     # --- GESTION DES ÉCHECS ---
-                    print("\n" + "="*60)
-                    print(f"[Thread-{thread_id}] Message d'ÉCHEC reçu")
-                    print(f"Topic: {message.topic} | KYC Case ID: {kyc_case_id}")
+                    logging.info("\n" + "="*60)
+                    logging.info(f"[Thread-{thread_id}] Message d'ÉCHEC reçu")
+                    logging.info(f"Topic: {message.topic} | KYC Case ID: {kyc_case_id}")
                     pprint.pprint(payload)
-                    print("="*60 + "\n")
+                    logging.info("="*60 + "\n")
                     
                     reason = payload.get("reason", "Échec inconnu")
                     details = payload.get("details", {})
@@ -103,15 +101,15 @@ def consume_workflow_events():
                         status=KycCaseStatus.FAILED,
                         reason=full_reason[:255]
                     )
-                    print(f"-> Cas KYC '{kyc_case_id}' mis à jour avec le statut 'FAILED'.")
+                    logging.info(f"-> Cas KYC '{kyc_case_id}' mis à jour avec le statut 'FAILED'.")
 
                 elif message.topic == KAFKA_MATCHING_SUCCESS_TOPIC:
                     # --- GESTION DES SUCCÈS DE MATCHING ---
-                    print("\n" + "="*60)
-                    print(f"[Thread-{thread_id}] Message de SUCCÈS de matching reçu")
-                    print(f"Topic: {message.topic} | KYC Case ID: {kyc_case_id}")
+                    logging.info("\n" + "="*60)
+                    logging.info(f"[Thread-{thread_id}] Message de SUCCÈS de matching reçu")
+                    logging.info(f"Topic: {message.topic} | KYC Case ID: {kyc_case_id}")
                     pprint.pprint(payload)
-                    print("="*60 + "\n")
+                    logging.info("="*60 + "\n")
 
                     # Le matching est réussi, on met à jour le statut pour passer à l'étape suivante.
                     # Ex: PENDING_FINAL_REVIEW ou directement COMPLETED si c'est la fin.
@@ -121,7 +119,7 @@ def consume_workflow_events():
                         status=KycCaseStatus.COMPLETED, # Ou un autre statut de succès
                         reason="Processus KYC terminé avec succès après un face-matching positif."
                     )
-                    print(f"-> Cas KYC '{kyc_case_id}' mis à jour avec le statut 'COMPLETED'.")
+                    logging.info(f"-> Cas KYC '{kyc_case_id}' mis à jour avec le statut 'COMPLETED'.")
 
                 # 1. Commit de la transaction en base de données
                 db.commit()
@@ -129,14 +127,14 @@ def consume_workflow_events():
                 consumer.commit()
 
             except Exception as e:
-                print(f"[Thread-{thread_id}] [ERREUR] Erreur lors du traitement du message pour '{kyc_case_id}': {e}")
+                logging.info(f"[Thread-{thread_id}] [ERREUR] Erreur lors du traitement du message pour '{kyc_case_id}': {e}")
                 db.rollback()
             finally:
                 db.close()
                 
     except Exception as e:
-        print(f"[Thread-{thread_id}] [ERREUR FATALE] Le consommateur Kafka a rencontré une erreur majeure: {e}")
+        logging.info(f"[Thread-{thread_id}] [ERREUR FATALE] Le consommateur Kafka a rencontré une erreur majeure: {e}")
     finally:
         if consumer:
             consumer.close()
-        print(f"[Thread-{thread_id}] Consommateur Kafka arrêté.")
+        logging.info(f"[Thread-{thread_id}] Consommateur Kafka arrêté.")

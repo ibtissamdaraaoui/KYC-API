@@ -4,6 +4,9 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
 from config import settings
+from config.logging_config import setup_logging
+import logging
+setup_logging("document_service")
 # --------------------------------------------------------------------
 
 # ───────────────────────────────────────────────

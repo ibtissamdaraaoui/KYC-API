@@ -5,6 +5,9 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
 from config import settings
+from config.logging_config import setup_logging
+import logging
+setup_logging("matching_service")
 # --------------------------------------------------------------------
 
 import os
@@ -79,9 +82,9 @@ def execute_matching_process(db: Session, task: MatchingTask):
     Exécute le processus de matching et retourne le verdict et les détails.
     Ne fait plus de commit elle-même.
     """
-    print("\n" + "="*50)
-    print(f"▶️  [{task.kyc_case_id}] DÉCLENCHEMENT DU PROCESSUS DE FACE MATCHING")
-    print("="*50)
+    logging.info("\n" + "="*50)
+    logging.info(f"▶️  [{task.kyc_case_id}] DÉCLENCHEMENT DU PROCESSUS DE FACE MATCHING")
+    logging.info("="*50)
     
     task.status = "PROCESSING"
 
@@ -90,45 +93,45 @@ def execute_matching_process(db: Session, task: MatchingTask):
 
     try:
         # 1. Récupérer les enregistrements
-        print(f"[{task.kyc_case_id}] 1. Récupération des métadonnées (Doc ID: {task.document_id}, Selfie ID: {task.selfie_id})...")
+        logging.info(f"[{task.kyc_case_id}] 1. Récupération des métadonnées (Doc ID: {task.document_id}, Selfie ID: {task.selfie_id})...")
         doc_record = db.query(Document).filter_by(id=task.document_id).first()
         selfie_record = db.query(Selfie).filter_by(id=task.selfie_id).first()
         if not doc_record or not selfie_record:
             raise ValueError("Enregistrement document ou selfie introuvable en BDD.")
-        print(f"[{task.kyc_case_id}] ... Métadonnées OK.")
+        logging.info(f"[{task.kyc_case_id}] ... Métadonnées OK.")
 
         # 2. Déchiffrer les images
-        print(f"[{task.kyc_case_id}] 2. Déchiffrement des images...")
+        logging.info(f"[{task.kyc_case_id}] 2. Déchiffrement des images...")
         decrypted_cin_bytes = fetch_and_decrypt_image(
             minio_file_key=doc_record.recto_path, object_type='document', object_id=doc_record.id)
         decrypted_selfie_bytes = fetch_and_decrypt_image(
             minio_file_key=selfie_record.file_key, object_type='selfie', object_id=selfie_record.id)
         if not decrypted_cin_bytes or not decrypted_selfie_bytes:
             raise Exception("Échec du déchiffrement d'une ou des deux images.")
-        print(f"[{task.kyc_case_id}] ... Déchiffrement OK.")
+        logging.info(f"[{task.kyc_case_id}] ... Déchiffrement OK.")
 
         # 3. Extraire le visage de la CIN
-        print(f"[{task.kyc_case_id}] 3. Extraction du visage depuis la CIN...")
+        logging.info(f"[{task.kyc_case_id}] 3. Extraction du visage depuis la CIN...")
         extracted_face_bytes = extract_face_from_image(decrypted_cin_bytes)
         if not extracted_face_bytes:
             raise ValueError("Aucun visage n'a pu être extrait de l'image de la CIN.")
-        print(f"[{task.kyc_case_id}] ... Extraction du visage OK.")
+        logging.info(f"[{task.kyc_case_id}] ... Extraction du visage OK.")
 
         # 4. Comparer le visage extrait et le selfie
-        print(f"[{task.kyc_case_id}] 4. Comparaison du visage extrait avec le selfie...")
+        logging.info(f"[{task.kyc_case_id}] 4. Comparaison du visage extrait avec le selfie...")
         match_result = verify_faces(
             img1_bytes=extracted_face_bytes, img2_bytes=decrypted_selfie_bytes)
-        print(f"[{task.kyc_case_id}] ... Comparaison OK.")
+        logging.info(f"[{task.kyc_case_id}] ... Comparaison OK.")
         final_details = match_result
 
         # 5. Déterminer le verdict final
         is_match = match_result.get("verified", False)
         final_verdict = "MATCH" if is_match else "NO_MATCH"
         task.status = "COMPLETED"
-        print(f"✔️  [{task.kyc_case_id}] Processus de matching terminé. Verdict final: {final_verdict}")
+        logging.info(f"✔️  [{task.kyc_case_id}] Processus de matching terminé. Verdict final: {final_verdict}")
         
     except Exception as e:
-        print(f"❌ [{task.kyc_case_id}] ERREUR CRITIQUE durant le matching : {e}")
+        logging.error(f"❌ [{task.kyc_case_id}] ERREUR CRITIQUE durant le matching : {e}")
         task.status = "FAILED"
         final_verdict = "ERROR"
         final_details = {"error_message": str(e)}
@@ -157,7 +160,7 @@ def consume_events():
     while consumer is None:
         try:
             if not all([KAFKA_BROKER, TOPIC_DOC_VERIFIED, TOPIC_SELFIE_UPLOADED, KAFKA_GROUP_ID]):
-                print("❌ ERREUR: Variables d'environnement Kafka manquantes.")
+                logging.info("❌ ERREUR: Variables d'environnement Kafka manquantes.")
                 time.sleep(10)
                 continue
 
@@ -170,12 +173,12 @@ def consume_events():
                 enable_auto_commit=False,
                 max_poll_interval_ms=600000 
             )
-            print(f"✅ Connecté à Kafka. En écoute sur les topics: '{TOPIC_DOC_VERIFIED}', '{TOPIC_SELFIE_UPLOADED}'...")
+            logging.info(f"✅ Connecté à Kafka. En écoute sur les topics: '{TOPIC_DOC_VERIFIED}', '{TOPIC_SELFIE_UPLOADED}'...")
         except NoBrokersAvailable:
-            print(f"❌ Kafka non disponible à '{KAFKA_BROKER}'. Nouvelle tentative dans 5s...")
+            logging.error(f"❌ Kafka non disponible à '{KAFKA_BROKER}'. Nouvelle tentative dans 5s...")
             time.sleep(5)
         except Exception as e:
-            print(f"❌ Erreur de connexion à Kafka: {e}")
+            logging.error(f"❌ Erreur de connexion à Kafka: {e}")
             time.sleep(5)
 
     for message in consumer:
@@ -185,7 +188,7 @@ def consume_events():
             consumer.commit()
             continue
 
-        print(f"\n📩 Message reçu sur le topic '{message.topic}' pour {kyc_case_id}")
+        logging.info(f"\n📩 Message reçu sur le topic '{message.topic}' pour {kyc_case_id}")
 
         db = SessionLocal()
         try:
@@ -203,18 +206,18 @@ def consume_events():
                 verdict, details = execute_matching_process(db, task)
                 
                 db.commit() # Commit du résultat du matching
-                print(f"[{kyc_case_id}] Résultat du matching commité en BDD.")
+                logging.info(f"[{kyc_case_id}] Résultat du matching commité en BDD.")
 
                 # Envoi du message de statut au workflow_service
                 if verdict == "MATCH":
-                    print(f"--> Statut MATCH. Envoi du message au topic '{KAFKA_MATCHING_SUCCESS_TOPIC}'...")
+                    logging.info(f"--> Statut MATCH. Envoi du message au topic '{KAFKA_MATCHING_SUCCESS_TOPIC}'...")
                     success_payload = {
                         "kyc_case_id": kyc_case_id, "status": "MATCHING_SUCCESS",
                         "details": {"distance": details.get("distance"), "model": details.get("model")}
                     }
                     producer.send(KAFKA_MATCHING_SUCCESS_TOPIC, value=success_payload)
                 else:
-                    print(f"--> Statut {verdict}. Envoi du message au topic '{KAFKA_FAILURE_TOPIC}'...")
+                    logging.info(f"--> Statut {verdict}. Envoi du message au topic '{KAFKA_FAILURE_TOPIC}'...")
                     failure_payload = {
                         "kyc_case_id": kyc_case_id, "failed_service": "matching_service",
                         "reason": f"FACE_MATCHING_{verdict}", "details": details 
@@ -222,12 +225,12 @@ def consume_events():
                     producer.send(KAFKA_FAILURE_TOPIC, value=failure_payload)
 
                 producer.flush()
-                print("--> Message de statut envoyé au workflow_service.")
+                logging.info("--> Message de statut envoyé au workflow_service.")
             
             consumer.commit()
 
         except Exception as e:
-            print(f"❌ ERREUR MAJEURE DANS LA BOUCLE KAFKA pour le cas {kyc_case_id}: {e}")
+            logging.error(f"❌ ERREUR MAJEURE DANS LA BOUCLE KAFKA pour le cas {kyc_case_id}: {e}")
             db.rollback()
             time.sleep(5)
         finally:
